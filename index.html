@@ -91,8 +91,16 @@ header .spacer{flex:1}
 .full{font-size:15px;line-height:1.65}
 .full b{font-family:var(--serif);font-size:20px;font-weight:500;margin-right:8px}
 .note{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:6px}
-.near{margin-top:14px;font-size:13.5px;color:var(--muted);line-height:1.75}
-.near b{color:var(--ink);font-family:var(--serif);font-weight:500;font-size:15px}
+.near{margin-top:16px;font-size:13.5px;color:var(--muted);line-height:1.7}
+.near b{color:var(--ink);font-family:var(--serif);font-weight:500;font-size:16px;margin-right:7px}
+.near .nl{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;margin-bottom:6px}
+.grpwrap{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.grpcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 15px}
+.grphead{padding-bottom:9px;margin-bottom:9px;border-bottom:1px solid var(--line);font-size:13.5px}
+.grphead b{font-family:var(--serif);font-size:20px;font-weight:500;margin-right:8px}
+.grpmate{font-size:13px;color:var(--muted);padding:2px 0}
+.grpmate b{color:var(--ink);font-family:var(--serif);font-size:15px;font-weight:500;margin-right:7px}
 .next{margin-top:20px;background:var(--ink);color:#fff;border-radius:var(--r);
   padding:11px 22px;font-size:14px}
 .next:hover{background:var(--accent)}
@@ -200,6 +208,7 @@ function setHome(si) {
       <button class="chip" id="go" aria-pressed="true">학습 시작 (${Math.min(d, DUE_CAP) + Math.min(n, NEW_PER)}개)</button>
       ${leech.length ? `<button class="chip" id="lch">자주 틀리는 단어 ${leech.length}개</button>` : ''}
       <button class="chip" id="peek" aria-pressed="false">뜻 가리고 훑기</button>
+      <button class="chip" id="grp">겹치는 단어 묶어보기</button>
     </div>
     <table id="tbl"><thead><tr><th></th><th>단어</th><th>뜻</th></tr></thead><tbody>
     ${ws.map(w => `<tr><td class="n">${w.i}</td><td class="w">${esc(w.w)}</td>
@@ -210,6 +219,26 @@ function setHome(si) {
   if (l) l.onclick = () => session(si, shuffle(leech.slice()));
   const p = document.getElementById('peek'), t = document.getElementById('tbl');
   p.onclick = () => { const on = t.classList.toggle('hide'); p.setAttribute('aria-pressed', on); };
+  document.getElementById('grp').onclick = () => groups(si);
+}
+
+/* ---------- 겹치는 단어 묶어보기 ---------- */
+function groups(si) {
+  const ws = setsOf()[si];
+  const rows = ws.filter(w => (w.e || []).length).map(w => {
+    const mates = w.e.map(i => BY[i]).filter(Boolean).slice(0, 5);
+    return `<div class="grpcard">
+      <div class="grphead"><b>${esc(w.w)}</b> ${esc(w.m)}</div>
+      ${mates.map(x => `<div class="grpmate"><b>${esc(x.w)}</b> ${esc(x.m)}</div>`).join('')}
+    </div>`;
+  });
+  app.innerHTML = `
+    <div class="row"><button class="chip" id="bk2">← 세트로</button></div>
+    <p class="lede">뜻풀이 문자열이 겹치는 단어끼리 묶었습니다. 대부분 동의어라
+      Sentence Equivalence에서 짝으로 쓰이지만, <b>반대말이 섞여 들어온 경우도 있으니</b>
+      뜻을 직접 보고 판단하세요. 이 세트에서 겹침이 있는 단어 ${rows.length}개.</p>
+    <div class="grpwrap">${rows.join('') || '<p class="lede">겹치는 단어가 없습니다.</p>'}</div>`;
+  document.getElementById('bk2').onclick = () => setHome(si);
 }
 
 function buildQueue(ws) {
@@ -228,13 +257,16 @@ function session(si, queue) {
   const ask = () => {
     if (!queue.length) { finish(); return; }
     const w = queue.shift(), s = st(w.i);
-    // 오답 선택지: 뜻이 비슷한 단어 우선, 모자라면 같은 세트에서 보충
-    const pool = (w.s || []).map(i => BY[i]).filter(x => x && x.m !== w.m);
-    const extra = setWords.filter(x => x.i !== w.i && x.m !== w.m);
-    const distract = shuffle(pool.slice()).slice(0, 3);
-    while (distract.length < 3) {
-      const c = extra[Math.random() * extra.length | 0];
-      if (c && !distract.includes(c)) distract.push(c);
+    // 오답 선택지: 정답과 뜻 토큰이 하나도 겹치지 않는 단어만. 겹치면 답이 둘이 된다.
+    const clash = (a, b) => (a.t || []).some(x => (b.t || []).includes(x));
+    const clean = setWords.filter(x => x.i !== w.i && !clash(x, w));
+    const backup = WORDS.filter(x => x.i !== w.i && !clash(x, w));
+    const distract = [];
+    for (const src of [shuffle(clean.slice()), shuffle(backup.slice(0, 400))]) {
+      for (const c of src) {
+        if (distract.length >= 3) break;
+        if (!distract.some(d => d.i === c.i || clash(d, c))) distract.push(c);
+      }
     }
     const opts = shuffle([w, ...distract]);
     app.innerHTML = `
@@ -261,14 +293,14 @@ function session(si, queue) {
     document.onkeydown = e => { const n = +e.key; if (n >= 1 && n <= 4) { e.preventDefault(); pick(n - 1); } };
 
     function reveal(w, ok) {
-      const near = (w.s || []).slice(0, 3).map(i => BY[i]).filter(Boolean);
+      const near = (w.e || []).slice(0, 4).map(i => BY[i]).filter(Boolean);
       document.getElementById('after').innerHTML = `
         <div class="after">
           <div class="verdict ${ok ? 'ok' : 'no'}">${ok ? '맞음 · 상자 ' + st(w.i).b + '로' : '틀림 · 상자 1로'}</div>
           <div class="full"><b>${esc(w.w)}</b>${esc(w.m)}</div>
           ${w.n ? `<div class="note">${esc(w.n)}</div>` : ''}
-          ${near.length ? `<div class="near">헷갈리는 이웃 — ${near.map(x =>
-            `<b>${esc(x.w)}</b> ${esc(x.m.slice(0, 28))}`).join(' · ')}</div>` : ''}
+          ${near.length ? `<div class="near"><span class="nl">뜻풀이가 겹치는 단어</span>${near.map(x =>
+            `<div><b>${esc(x.w)}</b> ${esc(x.m)}</div>`).join('')}</div>` : ''}
           <button class="next" id="nx">다음 <kbd style="opacity:.6">space</kbd></button>
         </div>`;
       document.getElementById('nx').onclick = go;
