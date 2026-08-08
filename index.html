@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>표제어 2505 — 120단위 학습</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,500;1,6..72,300&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --bg:#EBEDEF; --surface:#FFFFFF; --ink:#141A1F; --muted:#6B7681;
+  --line:#D6DBE0; --accent:#1D5F59; --accent-soft:#DCE9E6; --wrong:#9E3B36;
+  --r:3px;
+  --sans:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --serif:"Newsreader",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;
+  padding:0 20px 64px;padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+.wrap{max-width:860px;margin:0 auto}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---- header ---- */
+header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+  padding:26px 0 18px;border-bottom:1px solid var(--line);margin-bottom:26px}
+.brand{font-family:var(--serif);font-size:26px;font-weight:500;letter-spacing:-.01em}
+.brand em{font-style:italic;font-weight:300}
+.tag{font-family:var(--mono);font-size:11px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted)}
+header .spacer{flex:1}
+.linkbtn{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted);padding:5px 0;border-bottom:1px solid transparent}
+.linkbtn:hover{color:var(--ink);border-bottom-color:var(--ink)}
+
+/* ---- set index ---- */
+.lede{max-width:52ch;color:var(--muted);font-size:14.5px;margin-bottom:26px}
+.lede b{color:var(--ink);font-weight:500}
+.sets{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.set{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:15px 15px 13px;text-align:left;width:100%;display:block;
+  transition:border-color .14s, transform .14s}
+.set:hover{border-color:var(--accent);transform:translateY(-1px)}
+.set-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px}
+.set-no{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--muted)}
+.set-rng{font-family:var(--serif);font-size:19px}
+.set-rng small{font-size:12px;color:var(--muted);font-family:var(--mono);margin-left:5px}
+/* signature: the 120-cell grid, one cell per word */
+.grid120{display:grid;grid-template-columns:repeat(20,1fr);gap:1.5px;margin-bottom:11px}
+.cell{aspect-ratio:1;background:#E3E7EA;border-radius:.5px}
+.cell.b1{background:#C4CFD2}.cell.b2{background:#9FB8B4}
+.cell.b3{background:#6E9A94}.cell.b4{background:#3C7A73}
+.cell.b5,.cell.b6{background:var(--accent)}
+.set-foot{display:flex;justify-content:space-between;align-items:baseline;
+  font-family:var(--mono);font-size:11px;color:var(--muted)}
+.due{color:var(--accent);font-weight:500}
+
+/* ---- session ---- */
+.bar{display:flex;align-items:center;gap:14px;margin-bottom:30px;
+  font-family:var(--mono);font-size:11.5px;color:var(--muted);letter-spacing:.05em}
+.rail{flex:1;height:2px;background:var(--line);position:relative}
+.rail i{position:absolute;inset:0 auto 0 0;background:var(--accent);transition:width .3s}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:44px 30px 34px;text-align:center}
+.prompt{font-family:var(--serif);font-size:clamp(38px,8vw,62px);font-weight:300;
+  letter-spacing:-.02em;line-height:1.1;word-break:break-word}
+.boxtag{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);margin-top:14px}
+.opts{display:grid;gap:9px;margin-top:30px;text-align:left}
+.opt{display:flex;gap:13px;align-items:flex-start;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;width:100%;
+  transition:border-color .12s,background .12s}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt:disabled{cursor:default}
+.opt kbd{font-family:var(--mono);font-size:11px;color:var(--muted);
+  border:1px solid var(--line);border-radius:2px;padding:1px 6px;flex:none;margin-top:2px}
+.opt.ok{border-color:var(--accent);background:var(--accent-soft)}
+.opt.ok kbd{border-color:var(--accent);color:var(--accent)}
+.opt.no{border-color:var(--wrong);background:#F4E7E6}
+.opt.no kbd{border-color:var(--wrong);color:var(--wrong)}
+
+.after{margin-top:22px;border-top:1px solid var(--line);padding-top:18px}
+.verdict{font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;margin-bottom:9px}
+.verdict.ok{color:var(--accent)}.verdict.no{color:var(--wrong)}
+.full{font-size:15px;line-height:1.65}
+.full b{font-family:var(--serif);font-size:20px;font-weight:500;margin-right:8px}
+.note{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:6px}
+.near{margin-top:14px;font-size:13.5px;color:var(--muted);line-height:1.75}
+.near b{color:var(--ink);font-family:var(--serif);font-weight:500;font-size:15px}
+.next{margin-top:20px;background:var(--ink);color:#fff;border-radius:var(--r);
+  padding:11px 22px;font-size:14px}
+.next:hover{background:var(--accent)}
+
+/* ---- list mode ---- */
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);text-align:left;font-weight:400;padding:0 10px 8px 0;
+  border-bottom:1px solid var(--line)}
+td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top}
+td.w{font-family:var(--serif);font-size:19px;width:32%}
+td.n{font-family:var(--mono);font-size:11px;color:var(--muted);width:44px}
+.hide td.m{color:transparent;background:linear-gradient(var(--line),var(--line)) no-repeat left 60%/100% 1px}
+.hide tr:hover td.m{color:var(--ink);background:none}
+.done{padding:60px 0;text-align:center}
+.done h2{font-family:var(--serif);font-size:32px;font-weight:300;margin-bottom:10px}
+.done p{color:var(--muted);font-size:14.5px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
+.chip{font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;padding:6px 12px;
+  border:1px solid var(--line);border-radius:var(--r);background:var(--surface);color:var(--muted)}
+.chip[aria-pressed="true"]{border-color:var(--ink);color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:520px){
+  .card{padding:34px 18px 26px}
+  .grid120{grid-template-columns:repeat(20,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="brand">표제어 <em>2505</em></div>
+  <div class="tag" id="crumb">21 sets · 120 each</div>
+  <div class="spacer"></div>
+  <button class="linkbtn" id="home" hidden>← 세트 목록</button>
+</header>
+<main id="app">불러오는 중…</main>
+</div>
+
+<script>
+const SIZE = 120;                       // 한 세트 크기
+const INTERVAL = [0, 0, 1, 3, 7, 16];   // 박스별 다음 복습까지 일수
+const NEW_PER = 20, DUE_CAP = 60;       // 한 세션 신규 / 복습 상한
+const KEY = 'pyoje-progress-v1';
+
+let WORDS = [], BY = {}, prog = {};
+const today = () => Math.floor(Date.now() / 864e5);
+const load = () => { try { prog = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { prog = {}; } };
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(prog)); } catch {} };
+const st = id => prog[id] || { b: 0, d: 0, x: 0 };
+const app = document.getElementById('app');
+const homeBtn = document.getElementById('home');
+const crumb = document.getElementById('crumb');
+const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0;[a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+fetch('words.json').then(r => r.json()).then(d => {
+  WORDS = d; d.forEach(w => BY[w.i] = w); load(); index();
+}).catch(() => { app.innerHTML = '<p class="lede">words.json을 읽지 못했습니다. index.html과 같은 폴더에 두고, 로컬에서는 <code>python3 -m http.server</code>로 열어주세요.</p>'; });
+
+const setsOf = () => {
+  const out = [];
+  for (let s = 0; s * SIZE < WORDS.length; s++) out.push(WORDS.slice(s * SIZE, s * SIZE + SIZE));
+  return out;
+};
+const dueCount = ws => ws.filter(w => { const s = st(w.i); return s.b > 0 && s.b < 6 && s.d <= today(); }).length;
+const newCount = ws => ws.filter(w => st(w.i).b === 0).length;
+
+/* ---------- 세트 목록 ---------- */
+function index() {
+  homeBtn.hidden = true; crumb.textContent = '21 sets · 120 each';
+  const sets = setsOf();
+  const totDue = sets.reduce((a, s) => a + dueCount(s), 0);
+  const mastered = WORDS.filter(w => st(w.i).b >= 5).length;
+  app.innerHTML = `
+  <p class="lede">세트를 고르면 <b>오늘 볼 것</b>만 꺼내옵니다. 새 단어 ${NEW_PER}개 + 복습 예정 단어를
+    섞어서 내고, 틀린 단어는 그 자리에서 다시 큐에 들어갑니다.
+    지금 복습할 때가 된 단어 <b>${totDue}개</b> · 5번 상자 이상 <b>${mastered}개</b>.</p>
+  <div class="sets">${sets.map((ws, i) => {
+    const d = dueCount(ws), n = newCount(ws);
+    const cells = ws.map(w => `<div class="cell b${st(w.i).b}"></div>`).join('');
+    return `<button class="set" data-s="${i}">
+      <div class="set-top">
+        <span class="set-rng">${ws[0].w}<small>→ ${ws[ws.length - 1].w}</small></span>
+        <span class="set-no">${String(i + 1).padStart(2, '0')}</span>
+      </div>
+      <div class="grid120">${cells}</div>
+      <div class="set-foot">
+        <span>${d ? `<span class="due">복습 ${d}</span>` : '복습 없음'}</span>
+        <span>${n ? `새 단어 ${n}` : '전부 시작함'}</span>
+      </div></button>`;
+  }).join('')}</div>`;
+  app.querySelectorAll('.set').forEach(b => b.onclick = () => setHome(+b.dataset.s));
+}
+
+/* ---------- 세트 화면 ---------- */
+function setHome(si) {
+  const ws = setsOf()[si];
+  homeBtn.hidden = false; homeBtn.onclick = index;
+  crumb.textContent = `set ${String(si + 1).padStart(2, '0')} · ${ws[0].w}–${ws[ws.length - 1].w}`;
+  const d = dueCount(ws), n = newCount(ws);
+  const leech = ws.filter(w => st(w.i).x >= 3);
+  app.innerHTML = `
+    <div class="row">
+      <button class="chip" id="go" aria-pressed="true">학습 시작 (${Math.min(d, DUE_CAP) + Math.min(n, NEW_PER)}개)</button>
+      ${leech.length ? `<button class="chip" id="lch">자주 틀리는 단어 ${leech.length}개</button>` : ''}
+      <button class="chip" id="peek" aria-pressed="false">뜻 가리고 훑기</button>
+    </div>
+    <table id="tbl"><thead><tr><th></th><th>단어</th><th>뜻</th></tr></thead><tbody>
+    ${ws.map(w => `<tr><td class="n">${w.i}</td><td class="w">${esc(w.w)}</td>
+      <td class="m">${esc(w.m)}${w.n ? ` <span class="note">${esc(w.n)}</span>` : ''}</td></tr>`).join('')}
+    </tbody></table>`;
+  document.getElementById('go').onclick = () => session(si, buildQueue(ws));
+  const l = document.getElementById('lch');
+  if (l) l.onclick = () => session(si, shuffle(leech.slice()));
+  const p = document.getElementById('peek'), t = document.getElementById('tbl');
+  p.onclick = () => { const on = t.classList.toggle('hide'); p.setAttribute('aria-pressed', on); };
+}
+
+function buildQueue(ws) {
+  const due = ws.filter(w => { const s = st(w.i); return s.b > 0 && s.b < 6 && s.d <= today(); });
+  const fresh = ws.filter(w => st(w.i).b === 0).slice(0, NEW_PER);
+  return shuffle(due.slice(0, DUE_CAP).concat(fresh));
+}
+
+/* ---------- 학습 세션 ---------- */
+function session(si, queue) {
+  if (!queue.length) { setHome(si); return; }
+  const total = queue.length; let done = 0, right = 0;
+  const setWords = setsOf()[si];
+  homeBtn.onclick = () => setHome(si);
+
+  const ask = () => {
+    if (!queue.length) { finish(); return; }
+    const w = queue.shift(), s = st(w.i);
+    // 오답 선택지: 뜻이 비슷한 단어 우선, 모자라면 같은 세트에서 보충
+    const pool = (w.s || []).map(i => BY[i]).filter(x => x && x.m !== w.m);
+    const extra = setWords.filter(x => x.i !== w.i && x.m !== w.m);
+    const distract = shuffle(pool.slice()).slice(0, 3);
+    while (distract.length < 3) {
+      const c = extra[Math.random() * extra.length | 0];
+      if (c && !distract.includes(c)) distract.push(c);
+    }
+    const opts = shuffle([w, ...distract]);
+    app.innerHTML = `
+      <div class="bar"><span>${done + 1} / ${total}</span>
+        <span class="rail"><i style="width:${done / total * 100}%"></i></span>
+        <span>정답률 ${done ? Math.round(right / done * 100) : 0}%</span></div>
+      <div class="card"><div class="prompt">${esc(w.w)}</div>
+        <div class="boxtag">${s.b ? `상자 ${s.b}` : '처음 보는 단어'}${s.x >= 3 ? ` · ${s.x}회 틀림` : ''}</div></div>
+      <div class="opts">${opts.map((o, k) =>
+        `<button class="opt" data-k="${k}"><kbd>${k + 1}</kbd><span>${esc(o.m)}</span></button>`).join('')}</div>
+      <div id="after"></div>`;
+    const btns = [...app.querySelectorAll('.opt')];
+    const pick = k => {
+      const ok = opts[k] === w;
+      btns.forEach((b, j) => { b.disabled = true; if (opts[j] === w) b.classList.add('ok'); });
+      if (!ok) btns[k].classList.add('no');
+      done++; if (ok) right++;
+      grade(w, ok); if (!ok) queue.push(w);
+      reveal(w, ok);
+      document.onkeydown = e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); go(); } };
+    };
+    const go = () => { document.onkeydown = null; ask(); };
+    btns.forEach(b => b.onclick = () => pick(+b.dataset.k));
+    document.onkeydown = e => { const n = +e.key; if (n >= 1 && n <= 4) { e.preventDefault(); pick(n - 1); } };
+
+    function reveal(w, ok) {
+      const near = (w.s || []).slice(0, 3).map(i => BY[i]).filter(Boolean);
+      document.getElementById('after').innerHTML = `
+        <div class="after">
+          <div class="verdict ${ok ? 'ok' : 'no'}">${ok ? '맞음 · 상자 ' + st(w.i).b + '로' : '틀림 · 상자 1로'}</div>
+          <div class="full"><b>${esc(w.w)}</b>${esc(w.m)}</div>
+          ${w.n ? `<div class="note">${esc(w.n)}</div>` : ''}
+          ${near.length ? `<div class="near">헷갈리는 이웃 — ${near.map(x =>
+            `<b>${esc(x.w)}</b> ${esc(x.m.slice(0, 28))}`).join(' · ')}</div>` : ''}
+          <button class="next" id="nx">다음 <kbd style="opacity:.6">space</kbd></button>
+        </div>`;
+      document.getElementById('nx').onclick = go;
+      document.getElementById('nx').focus();
+    }
+  };
+
+  const finish = () => {
+    document.onkeydown = null;
+    app.innerHTML = `<div class="done"><h2>${total}개 끝</h2>
+      <p>정답률 ${Math.round(right / Math.max(done, 1) * 100)}% · 틀린 단어는 상자 1로 내려가 내일 다시 나옵니다.</p>
+      <button class="next" id="bk">세트로 돌아가기</button></div>`;
+    document.getElementById('bk').onclick = () => setHome(si);
+  };
+
+  ask();
+}
+
+function grade(w, ok) {
+  const s = { ...st(w.i) };
+  if (ok) { s.b = Math.min((s.b || 0) + 1, 6); s.d = today() + (INTERVAL[s.b] ?? 30); }
+  else { s.b = 1; s.d = today() + 1; s.x = (s.x || 0) + 1; }
+  prog[w.i] = s; save();
+}
+</script>
+</body>
+</html>
