@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title> 다리노야 할 수 있다! </title>
+<title>표제어 2505 — 120단위 학습</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,500;1,6..72,300&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -71,6 +71,19 @@ header .spacer{flex:1}
   letter-spacing:-.02em;line-height:1.1;word-break:break-word}
 .boxtag{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
   text-transform:uppercase;color:var(--muted);margin-top:14px}
+.hint{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--muted);
+  margin-top:8px;opacity:.75}
+.reveal{background:var(--surface);border:1px solid var(--line);border-top:none;
+  border-radius:0 0 var(--r) var(--r);padding:22px 26px 20px;text-align:left}
+.rec{display:flex;gap:9px;margin-top:20px}
+.show{flex:1;background:var(--ink);color:#fff;border-radius:var(--r);padding:13px;font-size:15px}
+.show:hover{background:var(--accent)}
+.show kbd,.g kbd{font-family:var(--mono);font-size:10.5px;opacity:.55;margin-left:6px}
+.g{flex:1;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);
+  padding:13px 8px;font-size:14.5px;transition:border-color .12s,background .12s}
+.g1:hover{border-color:var(--wrong);background:#F4E7E6}
+.g2:hover{border-color:#B08A3E;background:#F5EEE0}
+.g3:hover{border-color:var(--accent);background:var(--accent-soft)}
 .opts{display:grid;gap:9px;margin-top:30px;text-align:left}
 .opt{display:flex;gap:13px;align-items:flex-start;background:var(--surface);
   border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;width:100%;
@@ -176,6 +189,9 @@ function index() {
   const totDue = sets.reduce((a, s) => a + dueCount(s), 0);
   const mastered = WORDS.filter(w => st(w.i).b >= 5).length;
   app.innerHTML = `
+  <p class="lede">세트를 고르면 <b>오늘 볼 것</b>만 꺼내옵니다. 새 단어 ${NEW_PER}개 + 복습 예정 단어를
+    섞어서 내고, 틀린 단어는 그 자리에서 다시 큐에 들어갑니다.
+    지금 복습할 때가 된 단어 <b>${totDue}개</b> · 5번 상자 이상 <b>${mastered}개</b>.</p>
   <div class="sets">${sets.map((ws, i) => {
     const d = dueCount(ws), n = newCount(ws);
     const cells = ws.map(w => `<div class="cell b${st(w.i).b}"></div>`).join('');
@@ -206,14 +222,19 @@ function setHome(si) {
       ${leech.length ? `<button class="chip" id="lch">자주 틀리는 단어 ${leech.length}개</button>` : ''}
       <button class="chip" id="peek" aria-pressed="false">뜻 가리고 훑기</button>
       <button class="chip" id="grp">겹치는 단어 묶어보기</button>
+      <button class="chip" id="mc" aria-pressed="false">객관식으로</button>
     </div>
     <table id="tbl"><thead><tr><th></th><th>단어</th><th>뜻</th></tr></thead><tbody>
     ${ws.map(w => `<tr><td class="n">${w.i}</td><td class="w">${esc(w.w)}</td>
       <td class="m">${esc(w.m)}${w.n ? ` <span class="note">${esc(w.n)}</span>` : ''}</td></tr>`).join('')}
     </tbody></table>`;
-  document.getElementById('go').onclick = () => session(si, buildQueue(ws));
+  let mc = false;
+  document.getElementById('go').onclick = () => session(si, buildQueue(ws), mc);
+  const m = document.getElementById('mc');
+  m.onclick = () => { mc = !mc; m.setAttribute('aria-pressed', mc);
+    m.textContent = mc ? '객관식으로 (켜짐)' : '객관식으로'; };
   const l = document.getElementById('lch');
-  if (l) l.onclick = () => session(si, shuffle(leech.slice()));
+  if (l) l.onclick = () => session(si, shuffle(leech.slice()), mc);
   const p = document.getElementById('peek'), t = document.getElementById('tbl');
   p.onclick = () => { const on = t.classList.toggle('hide'); p.setAttribute('aria-pressed', on); };
   document.getElementById('grp').onclick = () => groups(si);
@@ -245,16 +266,59 @@ function buildQueue(ws) {
 }
 
 /* ---------- 학습 세션 ---------- */
-function session(si, queue) {
+function session(si, queue, mc) {
   if (!queue.length) { setHome(si); return; }
-  const total = queue.length; let done = 0, right = 0;
+  const total = queue.length; let done = 0, known = 0;
   const setWords = setsOf()[si];
   homeBtn.onclick = () => setHome(si);
+
+  const header = () => `<div class="bar"><span>${done + 1} / ${total}</span>
+      <span class="rail"><i style="width:${done / total * 100}%"></i></span>
+      <span>아는 것 ${done ? Math.round(known / done * 100) : 0}%</span></div>`;
+
+  const mates = w => (w.e || []).slice(0, 4).map(i => BY[i]).filter(Boolean);
+  const meaning = w => `<div class="full"><b>${esc(w.w)}</b>${esc(w.m)}</div>
+      ${w.n ? `<div class="note">${esc(w.n)}</div>` : ''}
+      ${mates(w).length ? `<div class="near"><span class="nl">뜻풀이가 겹치는 단어</span>${
+        mates(w).map(x => `<div><b>${esc(x.w)}</b> ${esc(x.m)}</div>`).join('')}</div>` : ''}`;
 
   const ask = () => {
     if (!queue.length) { finish(); return; }
     const w = queue.shift(), s = st(w.i);
-    // 오답 선택지: 정답과 뜻 토큰이 하나도 겹치지 않는 단어만. 겹치면 답이 둘이 된다.
+    if (mc) { askMC(w, s); return; }
+    const first = s.b === 0;
+
+    app.innerHTML = `${header()}
+      <div class="card"><div class="prompt">${esc(w.w)}</div>
+        <div class="boxtag">${first ? '처음 보는 단어' : `상자 ${s.b}`}${s.x >= 3 ? ` · ${s.x}회 틀림` : ''}</div>
+        ${first ? '' : '<div class="hint">3초 안에 안 떠오르면 모름입니다</div>'}</div>
+      <div id="back"></div>
+      <div class="row rec"><button class="show" id="sw">${first ? '뜻 보기' : '떠올렸으면 확인'} <kbd>space</kbd></button></div>`;
+
+    const flip = () => {
+      document.getElementById('back').innerHTML = `<div class="reveal">${meaning(w)}</div>`;
+      app.querySelector('.rec').innerHTML = first
+        ? `<button class="g g3" data-g="3">외웠음 <kbd>3</kbd></button>`
+        : `<button class="g g1" data-g="1">모름 <kbd>1</kbd></button>
+           <button class="g g2" data-g="2">애매 <kbd>2</kbd></button>
+           <button class="g g3" data-g="3">앎 <kbd>3</kbd></button>`;
+      app.querySelectorAll('.g').forEach(b => b.onclick = () => rate(+b.dataset.g));
+      document.onkeydown = e => { if ('123'.includes(e.key)) { e.preventDefault(); rate(+e.key); } };
+    };
+    const rate = g => {
+      document.onkeydown = null;
+      done++; if (g === 3) known++;
+      grade(w, g);
+      if (g < 3) queue.push(w);
+      ask();
+    };
+    document.getElementById('sw').onclick = flip;
+    document.onkeydown = e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flip(); } };
+    document.getElementById('sw').focus();
+  };
+
+  // --- 객관식 모드 (선택) ---
+  const askMC = (w, s) => {
     const clash = (a, b) => (a.t || []).some(x => (b.t || []).includes(x));
     const clean = setWords.filter(x => x.i !== w.i && !clash(x, w));
     const backup = WORDS.filter(x => x.i !== w.i && !clash(x, w));
@@ -266,49 +330,36 @@ function session(si, queue) {
       }
     }
     const opts = shuffle([w, ...distract]);
-    app.innerHTML = `
-      <div class="bar"><span>${done + 1} / ${total}</span>
-        <span class="rail"><i style="width:${done / total * 100}%"></i></span>
-        <span>정답률 ${done ? Math.round(right / done * 100) : 0}%</span></div>
+    app.innerHTML = `${header()}
       <div class="card"><div class="prompt">${esc(w.w)}</div>
-        <div class="boxtag">${s.b ? `상자 ${s.b}` : '처음 보는 단어'}${s.x >= 3 ? ` · ${s.x}회 틀림` : ''}</div></div>
+        <div class="boxtag">${s.b ? `상자 ${s.b}` : '처음 보는 단어'}</div></div>
       <div class="opts">${opts.map((o, k) =>
         `<button class="opt" data-k="${k}"><kbd>${k + 1}</kbd><span>${esc(o.m)}</span></button>`).join('')}</div>
       <div id="after"></div>`;
     const btns = [...app.querySelectorAll('.opt')];
+    const go = () => { document.onkeydown = null; ask(); };
     const pick = k => {
       const ok = opts[k] === w;
       btns.forEach((b, j) => { b.disabled = true; if (opts[j] === w) b.classList.add('ok'); });
       if (!ok) btns[k].classList.add('no');
-      done++; if (ok) right++;
-      grade(w, ok); if (!ok) queue.push(w);
-      reveal(w, ok);
-      document.onkeydown = e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); go(); } };
-    };
-    const go = () => { document.onkeydown = null; ask(); };
-    btns.forEach(b => b.onclick = () => pick(+b.dataset.k));
-    document.onkeydown = e => { const n = +e.key; if (n >= 1 && n <= 4) { e.preventDefault(); pick(n - 1); } };
-
-    function reveal(w, ok) {
-      const near = (w.e || []).slice(0, 4).map(i => BY[i]).filter(Boolean);
-      document.getElementById('after').innerHTML = `
-        <div class="after">
-          <div class="verdict ${ok ? 'ok' : 'no'}">${ok ? '맞음 · 상자 ' + st(w.i).b + '로' : '틀림 · 상자 1로'}</div>
-          <div class="full"><b>${esc(w.w)}</b>${esc(w.m)}</div>
-          ${w.n ? `<div class="note">${esc(w.n)}</div>` : ''}
-          ${near.length ? `<div class="near"><span class="nl">뜻풀이가 겹치는 단어</span>${near.map(x =>
-            `<div><b>${esc(x.w)}</b> ${esc(x.m)}</div>`).join('')}</div>` : ''}
-          <button class="next" id="nx">다음 <kbd style="opacity:.6">space</kbd></button>
-        </div>`;
+      done++; if (ok) known++;
+      grade(w, ok ? 3 : 1); if (!ok) queue.push(w);
+      document.getElementById('after').innerHTML = `<div class="after">
+        <div class="verdict ${ok ? 'ok' : 'no'}">${ok ? '맞음' : '틀림 · 상자 1로'}</div>
+        ${meaning(w)}<button class="next" id="nx">다음 <kbd style="opacity:.6">space</kbd></button></div>`;
       document.getElementById('nx').onclick = go;
       document.getElementById('nx').focus();
-    }
+      document.onkeydown = e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); go(); } };
+    };
+    btns.forEach(b => b.onclick = () => pick(+b.dataset.k));
+    document.onkeydown = e => { const n = +e.key; if (n >= 1 && n <= 4) { e.preventDefault(); pick(n - 1); } };
   };
 
   const finish = () => {
     document.onkeydown = null;
     app.innerHTML = `<div class="done"><h2>${total}개 끝</h2>
-      <p>정답률 ${Math.round(right / Math.max(done, 1) * 100)}% · 틀린 단어는 상자 1로 내려가 내일 다시 나옵니다.</p>
+      <p>바로 떠오른 단어 ${Math.round(known / Math.max(done, 1) * 100)}% ·
+         모름과 애매는 상자가 내려가 곧 다시 나옵니다.</p>
       <button class="next" id="bk">세트로 돌아가기</button></div>`;
     document.getElementById('bk').onclick = () => setHome(si);
   };
@@ -316,9 +367,10 @@ function session(si, queue) {
   ask();
 }
 
-function grade(w, ok) {
+function grade(w, g) {
   const s = { ...st(w.i) };
-  if (ok) { s.b = Math.min((s.b || 0) + 1, 6); s.d = today() + (INTERVAL[s.b] ?? 30); }
+  if (g === 3) { s.b = Math.min((s.b || 0) + 1, 6); s.d = today() + (INTERVAL[s.b] ?? 30); }
+  else if (g === 2) { s.b = Math.max(s.b || 1, 1); s.d = today() + 1; }
   else { s.b = 1; s.d = today() + 1; s.x = (s.x || 0) + 1; }
   prog[w.i] = s; save();
 }
