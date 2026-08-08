@@ -176,9 +176,6 @@ function index() {
   const totDue = sets.reduce((a, s) => a + dueCount(s), 0);
   const mastered = WORDS.filter(w => st(w.i).b >= 5).length;
   app.innerHTML = `
-  <p class="lede">세트를 고르면 <b>오늘 볼 것</b>만 꺼내옵니다. 새 단어 ${NEW_PER}개 + 복습 예정 단어를
-    섞어서 내고, 틀린 단어는 그 자리에서 다시 큐에 들어갑니다.
-    지금 복습할 때가 된 단어 <b>${totDue}개</b> · 5번 상자 이상 <b>${mastered}개</b>.</p>
   <div class="sets">${sets.map((ws, i) => {
     const d = dueCount(ws), n = newCount(ws);
     const cells = ws.map(w => `<div class="cell b${st(w.i).b}"></div>`).join('');
