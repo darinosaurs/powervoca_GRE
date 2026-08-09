@@ -155,8 +155,7 @@ td.n{font-family:var(--mono);font-size:11px;color:var(--muted);width:44px}
 
 <script>
 const SIZE = 120;                       // 한 세트 크기
-const INTERVAL = [0, 0, 1, 3, 7, 16];   // 박스별 다음 복습까지 일수
-const NEW_PER = 20, DUE_CAP = 60;       // 한 세션 신규 / 복습 상한
+const NEW_PER = 20, SESSION = 40;       // 한 세션 신규 상한 / 전체 카드 수
 const KEY = 'pyoje-progress-v1';
 
 let WORDS = [], BY = {}, prog = {};
@@ -179,8 +178,9 @@ const setsOf = () => {
   for (let s = 0; s * SIZE < WORDS.length; s++) out.push(WORDS.slice(s * SIZE, s * SIZE + SIZE));
   return out;
 };
-const dueCount = ws => ws.filter(w => { const s = st(w.i); return s.b > 0 && s.b < 6 && s.d <= today(); }).length;
+const weakCount = ws => ws.filter(w => { const b = st(w.i).b; return b > 0 && b < 3; }).length;
 const newCount = ws => ws.filter(w => st(w.i).b === 0).length;
+const doneCount = ws => ws.filter(w => st(w.i).b >= 5).length;
 
 /* ---------- 세트 목록 ---------- */
 function index() {
@@ -188,7 +188,7 @@ function index() {
   const sets = setsOf();
   app.innerHTML = `
   <div class="sets">${sets.map((ws, i) => {
-    const d = dueCount(ws), n = newCount(ws);
+    const d = weakCount(ws), n = newCount(ws);
     const cells = ws.map(w => `<div class="cell b${st(w.i).b}"></div>`).join('');
     return `<button class="set" data-s="${i}">
       <div class="set-top">
@@ -197,8 +197,8 @@ function index() {
       </div>
       <div class="grid120">${cells}</div>
       <div class="set-foot">
-        <span>${d ? `<span class="due">복습 ${d}</span>` : '복습 없음'}</span>
-        <span>${n ? `새 단어 ${n}` : '전부 시작함'}</span>
+        <span>${d ? `<span class="due">약한 단어 ${d}</span>` : '약한 단어 없음'}</span>
+        <span>${n ? `안 본 단어 ${n}` : '다 봄'}</span>
       </div></button>`;
   }).join('')}</div>`;
   app.querySelectorAll('.set').forEach(b => b.onclick = () => setHome(+b.dataset.s));
@@ -209,11 +209,12 @@ function setHome(si) {
   const ws = setsOf()[si];
   homeBtn.hidden = false; homeBtn.onclick = index;
   crumb.textContent = `set ${String(si + 1).padStart(2, '0')} · ${ws[0].w}–${ws[ws.length - 1].w}`;
-  const d = dueCount(ws), n = newCount(ws);
+  const d = weakCount(ws), n = newCount(ws), fin = doneCount(ws);
   const leech = ws.filter(w => st(w.i).x >= 3);
   app.innerHTML = `
     <div class="row">
-      <button class="chip" id="go" aria-pressed="true">학습 시작 (${Math.min(d, DUE_CAP) + Math.min(n, NEW_PER)}개)</button>
+      <button class="chip" id="go" aria-pressed="true">이어서 ${Math.min(SESSION, ws.length - fin)}개</button>
+      ${d ? `<button class="chip" id="weak">약한 단어만 ${d}개</button>` : ''}
       ${leech.length ? `<button class="chip" id="lch">자주 틀리는 단어 ${leech.length}개</button>` : ''}
       <button class="chip" id="peek" aria-pressed="false">뜻 가리고 훑기</button>
       <button class="chip" id="grp">겹치는 단어 묶어보기</button>
@@ -225,6 +226,9 @@ function setHome(si) {
     </tbody></table>`;
   let mc = false;
   document.getElementById('go').onclick = () => session(si, buildQueue(ws), mc);
+  const wk = document.getElementById('weak');
+  if (wk) wk.onclick = () => session(si,
+    shuffle(ws.filter(w => { const b = st(w.i).b; return b > 0 && b < 3; })), mc);
   const m = document.getElementById('mc');
   m.onclick = () => { mc = !mc; m.setAttribute('aria-pressed', mc);
     m.textContent = mc ? '객관식으로 (켜짐)' : '객관식으로'; };
@@ -255,21 +259,32 @@ function groups(si) {
 }
 
 function buildQueue(ws) {
-  const due = ws.filter(w => { const s = st(w.i); return s.b > 0 && s.b < 6 && s.d <= today(); });
-  const fresh = ws.filter(w => st(w.i).b === 0).slice(0, NEW_PER);
-  return shuffle(due.slice(0, DUE_CAP).concat(fresh));
+  // 날짜와 무관. 누를 때마다 약한 것부터 채워서 SESSION개.
+  const byBox = b => shuffle(ws.filter(w => st(w.i).b === b));
+  const weak = [...byBox(1), ...byBox(2)];
+  const fresh = byBox(0).slice(0, NEW_PER);
+  const rest = [...byBox(3), ...byBox(4)];
+  const q = [...weak, ...fresh, ...rest].slice(0, SESSION);
+  return shuffle(q);
 }
 
 /* ---------- 학습 세션 ---------- */
 function session(si, queue, mc) {
   if (!queue.length) { setHome(si); return; }
-  const total = queue.length; let done = 0, known = 0;
+  const total = queue.length;          // 이 세션의 고유 단어 수
+  const reps = new Map();              // 단어별 오늘 재출제 횟수
+  const MAX_REP = 2;                   // 모름이어도 하루 3번까지만
+  let cleared = 0, known = 0;          // cleared = 오늘 할 일이 끝난 단어 수
   const setWords = setsOf()[si];
   homeBtn.onclick = () => setHome(si);
 
-  const header = () => `<div class="bar"><span>${done + 1} / ${total}</span>
-      <span class="rail"><i style="width:${done / total * 100}%"></i></span>
-      <span>아는 것 ${done ? Math.round(known / done * 100) : 0}%</span></div>`;
+  const header = () => {
+    const again = queue.length - (total - cleared);
+    return `<div class="bar"><span>남은 것 ${total - cleared}</span>
+      <span class="rail"><i style="width:${cleared / total * 100}%"></i></span>
+      <span>${again > 0 ? `다시 볼 것 ${again} · ` : ''}바로 떠오름 ${
+        cleared ? Math.round(known / cleared * 100) : 0}%</span></div>`;
+  };
 
   const mates = w => (w.e || []).slice(0, 4).map(i => BY[i]).filter(Boolean);
   const meaning = w => `<div class="full"><b>${esc(w.w)}</b>${esc(w.m)}</div>
@@ -302,9 +317,11 @@ function session(si, queue, mc) {
     };
     const rate = g => {
       document.onkeydown = null;
-      done++; if (g === 3) known++;
+      const r = reps.get(w.i) || 0;
       grade(w, g);
-      if (g < 3) queue.push(w);
+      // 모름만 다시 큐 뒤로. 애매와 앎은 오늘 여기서 끝.
+      if (g === 1 && r < MAX_REP) { reps.set(w.i, r + 1); queue.push(w); }
+      else { cleared++; if (g === 3 && r === 0) known++; }
       ask();
     };
     document.getElementById('sw').onclick = flip;
@@ -337,8 +354,10 @@ function session(si, queue, mc) {
       const ok = opts[k] === w;
       btns.forEach((b, j) => { b.disabled = true; if (opts[j] === w) b.classList.add('ok'); });
       if (!ok) btns[k].classList.add('no');
-      done++; if (ok) known++;
-      grade(w, ok ? 3 : 1); if (!ok) queue.push(w);
+      const r = reps.get(w.i) || 0;
+      grade(w, ok ? 3 : 1);
+      if (!ok && r < MAX_REP) { reps.set(w.i, r + 1); queue.push(w); }
+      else { cleared++; if (ok && r === 0) known++; }
       document.getElementById('after').innerHTML = `<div class="after">
         <div class="verdict ${ok ? 'ok' : 'no'}">${ok ? '맞음' : '틀림 · 상자 1로'}</div>
         ${meaning(w)}<button class="next" id="nx">다음 <kbd style="opacity:.6">space</kbd></button></div>`;
@@ -352,9 +371,10 @@ function session(si, queue, mc) {
 
   const finish = () => {
     document.onkeydown = null;
+    const stuck = [...reps.keys()].length;
     app.innerHTML = `<div class="done"><h2>${total}개 끝</h2>
-      <p>바로 떠오른 단어 ${Math.round(known / Math.max(done, 1) * 100)}% ·
-         모름과 애매는 상자가 내려가 곧 다시 나옵니다.</p>
+      <p>첫 시도에 바로 떠오른 단어 ${Math.round(known / Math.max(total, 1) * 100)}%${
+        stuck ? ` · 막힌 단어 ${stuck}개는 다음에 눌렀을 때 먼저 나옵니다` : ''}.</p>
       <button class="next" id="bk">세트로 돌아가기</button></div>`;
     document.getElementById('bk').onclick = () => setHome(si);
   };
@@ -364,9 +384,9 @@ function session(si, queue, mc) {
 
 function grade(w, g) {
   const s = { ...st(w.i) };
-  if (g === 3) { s.b = Math.min((s.b || 0) + 1, 6); s.d = today() + (INTERVAL[s.b] ?? 30); }
-  else if (g === 2) { s.b = Math.max(s.b || 1, 1); s.d = today() + 1; }
-  else { s.b = 1; s.d = today() + 1; s.x = (s.x || 0) + 1; }
+  if (g === 3) s.b = Math.min((s.b || 0) + 1, 6);
+  else if (g === 2) s.b = Math.max(Math.min(s.b || 1, 4), 1);
+  else { s.b = 1; s.x = (s.x || 0) + 1; }
   prog[w.i] = s; save();
 }
 </script>
